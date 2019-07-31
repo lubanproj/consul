@@ -119,6 +119,13 @@ func ParseCertURI(input *url.URL) (CertURI, error) {
 				Domain:    input.Host[idx+1:],
 			}, nil
 		}
+	} else {
+		// The SPIFFE spec states that individual workloads should have a path.
+		// We assume anything that hasn't matched by now is an external service.
+		return &SpiffeIDExternalService{
+			Host: input.Host,
+			Path: input.Path,
+		}, nil
 	}
 
 	return nil, fmt.Errorf("SPIFFE ID is not in the expected format: %s", input.String())

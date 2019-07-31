@@ -3,6 +3,7 @@ package get
 import (
 	"flag"
 	"fmt"
+	"github.com/hashicorp/consul/command/intention"
 	"io"
 	"sort"
 	"time"
@@ -25,12 +26,18 @@ type cmd struct {
 	http  *flags.HTTPFlags
 	help  string
 
+	// flags
+	flagSourceType string
+
 	// testStdin is the input for testing.
 	testStdin io.Reader
 }
 
 func (c *cmd) init() {
 	c.flags = flag.NewFlagSet("", flag.ContinueOnError)
+	c.flags.StringVar(&c.flagSourceType, "src-type", "consul",
+		intention.SRCTypeUsageAbbrev + " Ignored if ID is set.")
+
 	c.http = &flags.HTTPFlags{}
 	flags.Merge(c.flags, c.http.ClientFlags())
 	flags.Merge(c.flags, c.http.ServerFlags())
@@ -42,6 +49,12 @@ func (c *cmd) Run(args []string) int {
 		return 1
 	}
 
+	srcType, err := intention.ValidateSrcTypeFlag(c.flagSourceType)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
 	// Create and test the HTTP client
 	client, err := c.http.APIClient()
 	if err != nil {
@@ -51,7 +64,7 @@ func (c *cmd) Run(args []string) int {
 
 	// Get the intention ID to load
 	f := &finder.Finder{Client: client}
-	id, err := f.IDFromArgs(c.flags.Args())
+	id, err := f.IDFromArgs(srcType, c.flags.Args())
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error: %s", err))
 		return 1
@@ -67,6 +80,7 @@ func (c *cmd) Run(args []string) int {
 	// Format the tabular data
 	data := []string{
 		fmt.Sprintf("Source:|%s", ixn.SourceString()),
+		fmt.Sprintf("SourceType:|%s", ixn.SourceType),
 		fmt.Sprintf("Destination:|%s", ixn.DestinationString()),
 		fmt.Sprintf("Action:|%s", ixn.Action),
 		fmt.Sprintf("ID:|%s", ixn.ID),

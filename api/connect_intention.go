@@ -106,6 +106,16 @@ type IntentionSourceType string
 const (
 	// IntentionSourceConsul is a service within the Consul catalog.
 	IntentionSourceConsul IntentionSourceType = "consul"
+
+	// IntentionSourceExternalTrustDomain is a service whose identity is not provided
+	// by Connect and will present a SPIFFE ID whose trust domain (i.e. hostname)
+	// is the same as that set in the intention's SourceName.
+	IntentionSourceExternalTrustDomain IntentionSourceType = "external-trust-domain"
+
+	// IntentionSourceExternalURI is a service whose identity is not provided
+	// by Connect and will present a SPIFFE ID equal to the ID set in the
+	// intention's SourceName.
+	IntentionSourceExternalURI IntentionSourceType = "external-uri"
 )
 
 // IntentionMatch are the arguments for the intention match API.

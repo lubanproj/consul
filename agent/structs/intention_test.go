@@ -134,13 +134,25 @@ func TestIntentionValidate(t *testing.T) {
 		{
 			"SourceType is not set",
 			func(x *Intention) { x.SourceType = "" },
-			"SourceType must",
+			"SourceType must be set to 'consul'",
 		},
 
 		{
 			"SourceType is other",
 			func(x *Intention) { x.SourceType = IntentionSourceType("other") },
-			"SourceType must",
+			"SourceType must be set to 'consul'",
+		},
+
+		{
+			"SourceType is ext-uri",
+			func(x *Intention) { x.SourceType = IntentionSourceType("ext-uri") },
+			"SourceTypes 'ext-trust-domain' and 'ext-uri' are only supported in Consul Enterprise",
+		},
+
+		{
+			"SourceType is ext-trust-domain",
+			func(x *Intention) { x.SourceType = IntentionSourceType("ext-trust-domain") },
+			"SourceTypes 'ext-trust-domain' and 'ext-uri' are only supported in Consul Enterprise",
 		},
 	}
 

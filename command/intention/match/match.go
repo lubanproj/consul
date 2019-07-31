@@ -3,6 +3,7 @@ package match
 import (
 	"flag"
 	"fmt"
+	"github.com/hashicorp/consul/command/intention"
 	"io"
 
 	"github.com/hashicorp/consul/api"
@@ -24,6 +25,7 @@ type cmd struct {
 
 	// flags
 	flagSource      bool
+	flagSourceType  string
 	flagDestination bool
 
 	// testStdin is the input for testing.
@@ -34,6 +36,8 @@ func (c *cmd) init() {
 	c.flags = flag.NewFlagSet("", flag.ContinueOnError)
 	c.flags.BoolVar(&c.flagSource, "source", false,
 		"Match intentions with the given source.")
+	c.flags.StringVar(&c.flagSourceType, "src-type", "consul",
+		intention.SRCTypeUsageAbbrev + " Ignored if ID is set.")
 	c.flags.BoolVar(&c.flagDestination, "destination", false,
 		"Match intentions with the given destination.")
 
@@ -62,6 +66,12 @@ func (c *cmd) Run(args []string) int {
 	by := api.IntentionMatchDestination
 	if c.flagSource {
 		by = api.IntentionMatchSource
+	}
+
+	srcType, err := intention.ValidateSrcTypeFlag(c.flagSourceType)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
 	}
 
 	// Create and test the HTTP client

@@ -3,6 +3,7 @@ package consul
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -290,6 +291,18 @@ func (s *Intention) Check(
 		uri = &connect.SpiffeIDService{
 			Namespace: query.SourceNS,
 			Service:   query.SourceName,
+		}
+	case structs.IntentionSourceExternalTrustDomain, structs.IntentionSourceExternalURI:
+		uriRaw, err := url.Parse(query.SourceName)
+		if err != nil {
+			return fmt.Errorf("unable to parse SourceName: %s", err)
+		}
+		if uriRaw.Scheme != "spiffe" {
+			return fmt.Errorf("SourceName scheme must be spiffe:// for SourceType %q", query.SourceType)
+		}
+		uri = &connect.SpiffeIDExternalService{
+			Host: uriRaw.Host,
+			Path: uriRaw.Path,
 		}
 
 	default:

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/hashicorp/consul/command/intention"
 	"io"
 	"os"
 
@@ -30,6 +31,7 @@ type cmd struct {
 	flagDeny    bool
 	flagFile    bool
 	flagReplace bool
+	flagSourceType string
 	flagMeta    map[string]string
 
 	// testStdin is the input for testing.
@@ -46,6 +48,15 @@ func (c *cmd) init() {
 		"Read intention data from one or more files.")
 	c.flags.BoolVar(&c.flagReplace, "replace", false,
 		"Replace matching intentions.")
+	c.flags.StringVar(&c.flagSourceType, "src-type", "consul",
+		"Type of SRC. One of consul (default), external-uri or "+
+			"external-trust-domain. external-uri and external-trust-domain are only supported "+
+			"in Consul Enterprise. external-uri or external-trust-domain should be used "+
+			"when SRC is a service whose identity is not provided by the "+
+			"Connect CA. If -src-type=external-uri, SRC must be a full SPIFFE ID, "+
+			"e.g. 'spiffe://trust.domain/path'. If -src-type=external-trust-domain, "+
+			"SRC must be a SPIFFE ID with only the trust domain, e.g. "+
+			"'spiffe://trust.domain'.")
 	c.flags.Var((*flags.FlagMapValue)(&c.flagMeta), "meta",
 		"Metadata to set on the intention, formatted as key=value. This flag "+
 			"may be specified multiple times to set multiple meta fields.")
@@ -94,7 +105,7 @@ func (c *cmd) Run(args []string) int {
 	for _, ixn := range ixns {
 		// If replace is set to true, then perform an update operation.
 		if c.flagReplace {
-			oldIxn, err := find.Find(ixn.SourceString(), ixn.DestinationString())
+			oldIxn, err := find.Find(ixn.SourceType, ixn.SourceString(), ixn.DestinationString())
 			if err != nil {
 				c.UI.Error(fmt.Sprintf(
 					"Error looking up intention for replacement with source %q "+
@@ -149,10 +160,15 @@ func (c *cmd) ixnsFromArgs(args []string) ([]*api.Intention, error) {
 		return nil, fmt.Errorf("Must specify two arguments: source and destination")
 	}
 
+	srcType, err := intention.ValidateSrcTypeFlag(c.flagSourceType)
+	if err != nil {
+		return nil, err
+	}
+
 	return []*api.Intention{&api.Intention{
 		SourceName:      args[0],
 		DestinationName: args[1],
-		SourceType:      api.IntentionSourceConsul,
+		SourceType:      srcType,
 		Action:          c.ixnAction(),
 		Meta:            c.flagMeta,
 	}}, nil

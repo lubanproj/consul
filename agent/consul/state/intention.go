@@ -30,7 +30,7 @@ func intentionsTableSchema() *memdb.TableSchema {
 				Name:         "destination",
 				AllowMissing: true,
 				// This index is not unique since we need uniqueness across the whole
-				// 4-tuple.
+				// 5-tuple.
 				Unique: false,
 				Indexer: &memdb.CompoundIndex{
 					Indexes: []memdb.Indexer{
@@ -49,7 +49,7 @@ func intentionsTableSchema() *memdb.TableSchema {
 				Name:         "source",
 				AllowMissing: true,
 				// This index is not unique since we need uniqueness across the whole
-				// 4-tuple.
+				// 5-tuple.
 				Unique: false,
 				Indexer: &memdb.CompoundIndex{
 					Indexes: []memdb.Indexer{
@@ -76,6 +76,10 @@ func intentionsTableSchema() *memdb.TableSchema {
 						},
 						&memdb.StringFieldIndex{
 							Field:     "SourceName",
+							Lowercase: true,
+						},
+						&memdb.StringFieldIndex{
+							Field:     "SourceType",
 							Lowercase: true,
 						},
 						&memdb.StringFieldIndex{
@@ -193,9 +197,9 @@ func (s *Store) intentionSetTxn(tx *memdb.Txn, idx uint64, ixn *structs.Intentio
 	}
 	ixn.ModifyIndex = idx
 
-	// Check for duplicates on the 4-tuple.
+	// Check for duplicates on the 5-tuple.
 	duplicate, err := tx.First(intentionsTableName, "source_destination",
-		ixn.SourceNS, ixn.SourceName, ixn.DestinationNS, ixn.DestinationName)
+		ixn.SourceNS, ixn.SourceName, string(ixn.SourceType), ixn.DestinationNS, ixn.DestinationName)
 	if err != nil {
 		return fmt.Errorf("failed intention lookup: %s", err)
 	}
